@@ -8,8 +8,8 @@ services:
     volumes:
       - db:/var/lib/mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=Packops-Password
-      - MYSQL_PASSWORD=Packops_DB_PASS
+      - MYSQL_ROOT_PASSWORD=Packops-DB_Password
+      - MYSQL_PASSWORD=Packops_PASS
       - MYSQL_DATABASE=nextcloud
       - MYSQL_USER=nextcloud
 
@@ -22,3 +22,8 @@ services:
       - db
     volumes:
       - nextcloud:/var/www/html
+    environment:
+      - MYSQL_PASSWORD=Packops_PASS
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=db
