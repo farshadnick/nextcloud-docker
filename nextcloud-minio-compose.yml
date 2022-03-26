@@ -1,0 +1,107 @@
+version: '3.2'
+
+services:
+  portainer:
+    image: portainer/portainer
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    ports:
+      - 9001:9000
+      - 8000:8000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+    secrets:
+      - postgres_db
+      - postgres_password
+      - postgres_user
+
+  app:
+    image: nextcloud
+    restart: always
+    ports:
+      - 8080:80
+    volumes:
+      - nextcloud:/var/www/html
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - NEXTCLOUD_ADMIN_PASSWORD_FILE=/run/secrets/nextcloud_admin_password
+      - NEXTCLOUD_ADMIN_USER_FILE=/run/secrets/nextcloud_admin_user
+      - NEXTCLOUD_TRUSTED_DOMAINS=172.22.99.125
+      - OBJECTSTORE_S3_HOST=objstor
+      - OBJECTSTORE_S3_BUCKET=nextcloud
+      - OBJECTSTORE_S3_KEY=/run/secrets/minio_user
+      - OBJECTSTORE_S3_SECRET=/run/secrets/minio_password
+      - OBJECTSTORE_S3_PORT=9000
+      - OBJECTSTORE_S3_SSL=false
+      - OBJECTSTORE_S3_REGION=optional
+      - OBJECTSTORE_S3_USEPATH_STYLE=true
+    depends_on:
+      - db
+    secrets:
+      - nextcloud_admin_password
+      - nextcloud_admin_user
+      - postgres_db
+      - postgres_password
+      - postgres_user
+      - minio_user
+      - minio_password
+
+  objstor:
+    image: minio/minio
+    restart: always
+    ports:
+      - 9000:9000
+    volumes:
+      - ./data1:/data1
+      - ./data2:/data2
+      - ./data3:/data3
+      - ./data4:/data4
+    environment:
+      MINIO_ACCESS_KEY: /run/secrets/minio_user
+      MINIO_SECRET_KEY: /run/secrets/minio_password
+    command: server /data{1...4}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    secrets:
+      - minio_user
+      - minio_password
+
+
+
+volumes:
+  db:
+  nextcloud:
+  portainer_data:
+
+secrets:
+  nextcloud_admin_password:
+    file: ./nextcloud_admin_password.txt # put admin password to this file
+  nextcloud_admin_user:
+    file: ./nextcloud_admin_user.txt # put admin username to this file
+  postgres_db:
+    file: ./postgres_db.txt # put postgresql db name to this file
+  postgres_password:
+    file: ./postgres_password.txt # put postgresql password to this file
+  postgres_user:
+    file: ./postgres_user.txt # put postgresql username to this file
+  minio_user:
+    file: ./minio_user.txt
+  minio_password:
+    file: ./minio_password.txt
